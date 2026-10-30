@@ -1,0 +1,15 @@
+{
+    "type": "artists",
+    "itemsPerPage": 30,
+    "page": 1,
+    "total": 1,
+    "artist": [
+        {
+            "mbid": "00000000-0000-4000-8000-000000000004",
+            "name": "Quiet Engines",
+            "sortName": "Quiet Engines",
+            "disambiguation": "",
+            "url": "https://www.setlist.fm/setlists/fixture-4.html"
+        }
+    ]
+}

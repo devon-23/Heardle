@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Runs migrations, starts the background worker, then serves the app on 127.0.0.1 only.
+# Ctrl-C stops both.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+php bin/migrate.php
+
+php bin/worker.php &
+WORKER=$!
+trap 'kill "$WORKER" 2>/dev/null || true' EXIT INT TERM
+
+PORT="${PORT:-8080}"
+echo "Heard Live → http://127.0.0.1:${PORT}"
+php -d upload_max_filesize=5M -d post_max_size=6M -S "127.0.0.1:${PORT}" -t public public/index.php

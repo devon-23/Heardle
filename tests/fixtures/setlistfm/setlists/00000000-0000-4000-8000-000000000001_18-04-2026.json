@@ -1,0 +1,82 @@
+{
+    "type": "setlists",
+    "itemsPerPage": 20,
+    "page": 1,
+    "total": 1,
+    "setlist": [
+        {
+            "id": "1a2b3c01",
+            "versionId": "v1a2b3c01",
+            "eventDate": "18-04-2026",
+            "lastUpdated": "2026-01-01T00:00:00.000+0000",
+            "artist": {
+                "mbid": "00000000-0000-4000-8000-000000000001",
+                "name": "The Midnight Arcade",
+                "sortName": "The Midnight Arcade",
+                "disambiguation": "",
+                "url": "https://www.setlist.fm/setlists/fixture-1.html"
+            },
+            "venue": {
+                "id": "venue-1a2b3c01",
+                "name": "Harbor Pavilion",
+                "city": {
+                    "id": "0",
+                    "name": "Portland",
+                    "state": "Oregon",
+                    "stateCode": "OR",
+                    "coords": {
+                        "lat": 0,
+                        "long": 0
+                    },
+                    "country": {
+                        "code": "US",
+                        "name": "United States"
+                    }
+                },
+                "url": "https://www.setlist.fm/venue/fixture-1a2b3c01.html"
+            },
+            "sets": {
+                "set": [
+                    {
+                        "song": [
+                            {
+                                "name": "Intro",
+                                "tape": true
+                            },
+                            {
+                                "name": "Neon Hours"
+                            },
+                            {
+                                "name": "Static Love",
+                                "info": "Acoustic"
+                            },
+                            {
+                                "name": "Night Drive"
+                            }
+                        ]
+                    },
+                    {
+                        "encore": 1,
+                        "song": [
+                            {
+                                "name": "Heart of Glass",
+                                "cover": {
+                                    "mbid": "00000000-0000-4000-8000-000000000050",
+                                    "name": "Blondie"
+                                }
+                            },
+                            {
+                                "name": "Neon Hours",
+                                "info": "Reprise"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "url": "https://www.setlist.fm/setlist/fixture/1a2b3c01.html",
+            "tour": {
+                "name": "Glow in the Dark Tour"
+            }
+        }
+    ]
+}

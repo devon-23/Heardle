@@ -1,0 +1,11 @@
+# Personal concert exports
+*Concert Archives Export*.csv
+
+# Local secrets
+.env
+
+# Database and uploads
+/storage/*
+!/storage/.gitkeep
+
+.DS_Store

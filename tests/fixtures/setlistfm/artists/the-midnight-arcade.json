@@ -1,0 +1,22 @@
+{
+    "type": "artists",
+    "itemsPerPage": 30,
+    "page": 1,
+    "total": 2,
+    "artist": [
+        {
+            "mbid": "00000000-0000-4000-8000-000000000001",
+            "name": "The Midnight Arcade",
+            "sortName": "The Midnight Arcade",
+            "disambiguation": "",
+            "url": "https://www.setlist.fm/setlists/fixture-1.html"
+        },
+        {
+            "mbid": "00000000-0000-4000-8000-000000000009",
+            "name": "Midnight Arcade Fire",
+            "sortName": "Midnight Arcade Fire",
+            "disambiguation": "",
+            "url": "https://www.setlist.fm/setlists/fixture-9.html"
+        }
+    ]
+}

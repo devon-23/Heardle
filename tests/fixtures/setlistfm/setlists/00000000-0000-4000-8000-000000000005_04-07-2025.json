@@ -1,0 +1,56 @@
+{
+    "type": "setlists",
+    "itemsPerPage": 20,
+    "page": 1,
+    "total": 1,
+    "setlist": [
+        {
+            "id": "1a2b3c06",
+            "versionId": "v1a2b3c06",
+            "eventDate": "04-07-2025",
+            "lastUpdated": "2026-01-01T00:00:00.000+0000",
+            "artist": {
+                "mbid": "00000000-0000-4000-8000-000000000005",
+                "name": "Low Tide Choir",
+                "sortName": "Low Tide Choir",
+                "disambiguation": "",
+                "url": "https://www.setlist.fm/setlists/fixture-5.html"
+            },
+            "venue": {
+                "id": "venue-1a2b3c06",
+                "name": "The Listening Room",
+                "city": {
+                    "id": "0",
+                    "name": "London",
+                    "state": "England",
+                    "stateCode": "ENG",
+                    "coords": {
+                        "lat": 0,
+                        "long": 0
+                    },
+                    "country": {
+                        "code": "GB",
+                        "name": "United Kingdom"
+                    }
+                },
+                "url": "https://www.setlist.fm/venue/fixture-1a2b3c06.html"
+            },
+            "sets": {
+                "set": [
+                    {
+                        "name": "Acoustic set",
+                        "song": [
+                            {
+                                "name": "Undertow"
+                            },
+                            {
+                                "name": "Saltwater"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "url": "https://www.setlist.fm/setlist/fixture/1a2b3c06.html"
+        }
+    ]
+}
