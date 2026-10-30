@@ -1,0 +1,19 @@
+{
+    "resultCount": 2,
+    "results": [
+        {
+            "wrapperType": "artist",
+            "artistType": "Artist",
+            "artistName": "Paper Satellites",
+            "artistId": 7001,
+            "primaryGenreName": "Alternative"
+        },
+        {
+            "wrapperType": "artist",
+            "artistType": "Artist",
+            "artistName": "The Paper Satellites Tribute Band",
+            "artistId": 7002,
+            "primaryGenreName": "Alternative"
+        }
+    ]
+}

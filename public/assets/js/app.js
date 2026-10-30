@@ -93,7 +93,7 @@ document.addEventListener('change', (event) => {
 // ---------------------------------------------------------------------------
 const scan = document.querySelector('[data-job][data-job-id]');
 if (scan && ['queued', 'running'].includes(scan.dataset.jobStatus)) {
-  const order = ['artists', 'setlists', 'songs'];
+  const order = ['artists', 'setlists', 'songs', 'matches'];
   const setMeter = (key, pct, text, active) => {
     const meter = scan.querySelector(`[data-meter="${key}"]`);
     meter.querySelector('progress').value = pct;
@@ -135,4 +135,86 @@ document.addEventListener('submit', (event) => {
   event.preventDefault();
   const card = form.closest('.event');
   save(form, card?.querySelector('.lineup-status'));
+});
+
+// ---------------------------------------------------------------------------
+// Apple Music review: save each decision in place and drive the queue from
+// the keyboard (j/k move, 1–5 pick, enter confirm, x leave off).
+// ---------------------------------------------------------------------------
+const queue = document.querySelector('[data-match-queue]');
+const tiles = document.querySelector('.tiles');
+let currentRow = null;
+
+const openRows = () => [...queue.querySelectorAll('[data-match]:not(.is-done)')];
+
+function selectRow(row, focus = true) {
+  if (!row) return;
+  currentRow?.classList.remove('is-current');
+  currentRow = row;
+  row.classList.add('is-current');
+  if (focus) {
+    row.focus({ preventScroll: true });
+    row.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+}
+
+function moveRow(step) {
+  const rows = [...queue.querySelectorAll('[data-match]')];
+  const index = rows.indexOf(currentRow);
+  selectRow(rows[Math.min(rows.length - 1, Math.max(0, index + step))]);
+}
+
+if (queue) {
+  const fromHash = location.hash.startsWith('#song-') ? document.getElementById(location.hash.slice(1)) : null;
+  selectRow(fromHash && queue.contains(fromHash) ? fromHash : openRows()[0], Boolean(fromHash));
+  queue.addEventListener('click', (event) => {
+    const row = event.target.closest('[data-match]');
+    if (row && row !== currentRow) selectRow(row, false);
+  });
+}
+
+document.addEventListener('submit', async (event) => {
+  const form = event.target;
+  if (!form.matches('.js-match') || !(queue?.contains(form) || tiles?.contains(form))) return;
+  event.preventDefault();
+  const item = form.closest('[data-match], .tile');
+  if (item.dataset.busy) return;
+  item.dataset.busy = '1';
+  const status = item.querySelector('[data-match-status]');
+  try {
+    const data = await postForm(form);
+    item.classList.add('is-done');
+    if (status) status.textContent = data.message;
+    else item.querySelector('.tile__action')?.replaceChildren(Object.assign(document.createElement('p'), { className: 'small muted', textContent: data.message }));
+
+    const picked = form.querySelector('[data-pick]');
+    if (picked) {
+      item.querySelectorAll('.option').forEach((option) => option.classList.remove('is-pick'));
+      form.closest('.option').classList.add('is-pick');
+    }
+    if (queue?.contains(item) && item === currentRow) {
+      const next = openRows().find((row) => row.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_PRECEDING) || openRows()[0];
+      selectRow(next);
+    }
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  } finally {
+    delete item.dataset.busy;
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (!queue || !currentRow || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.closest('input, textarea, select, [contenteditable]')) return;
+
+  if (event.key === 'j') moveRow(1);
+  else if (event.key === 'k') moveRow(-1);
+  else if (/^[1-5]$/.test(event.key)) currentRow.querySelector(`[data-pick="${event.key}"]`)?.click();
+  else if (event.key === 'x') currentRow.querySelector('[data-action="exclude"]')?.click();
+  else if (event.key === 'Enter' && (event.target === currentRow || event.target === document.body)) {
+    const accept = currentRow.querySelector('[data-action="accept"]');
+    if (accept) accept.click();
+    else moveRow(1);
+  } else return;
+  event.preventDefault();
 });

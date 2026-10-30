@@ -1,0 +1,37 @@
+{
+    "resultCount": 2,
+    "results": [
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 173966,
+            "collectionId": 683613,
+            "trackId": 900032,
+            "artistName": "Glass Hearts",
+            "collectionName": "Covers, Vol. 2",
+            "trackName": "Heart of Glass",
+            "trackCensoredName": "Heart of Glass",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900032",
+            "releaseDate": "2019-01-01T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200032,
+            "primaryGenreName": "Alternative"
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 837670,
+            "collectionId": 788267,
+            "trackId": 900031,
+            "artistName": "Blondie",
+            "collectionName": "Parallel Lines",
+            "trackName": "Heart of Glass",
+            "trackCensoredName": "Heart of Glass",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900031",
+            "releaseDate": "1978-09-23T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200031,
+            "primaryGenreName": "Alternative"
+        }
+    ]
+}

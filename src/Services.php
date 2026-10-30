@@ -6,6 +6,10 @@ namespace HeardLive;
 
 use HeardLive\Jobs\JobQueue;
 use HeardLive\Jobs\ScanJob;
+use HeardLive\Matching\ItunesClient;
+use HeardLive\Matching\ItunesFixtures;
+use HeardLive\Matching\MatchRepository;
+use HeardLive\Matching\RecordingMatcher;
 use HeardLive\Setlists\ArtistResolver;
 use HeardLive\Setlists\ScanRepository;
 use HeardLive\Setlists\SetlistFmClient;
@@ -27,11 +31,13 @@ use PDO;
 final class Services
 {
     private ?SetlistFmClient $setlistFm = null;
+    private ?ItunesClient $itunes = null;
 
     public function __construct(
         public readonly Config $config,
         private ?PDO $pdo = null,
         private ?HttpClient $setlistFmHttp = null,
+        private ?HttpClient $itunesHttp = null,
     ) {
     }
 
@@ -73,6 +79,36 @@ final class Services
         );
     }
 
+    public function itunes(): ItunesClient
+    {
+        if ($this->itunes !== null) {
+            return $this->itunes;
+        }
+        $fixture = $this->config->itunesMode === 'fixture';
+        $http = $this->itunesHttp ?? ($fixture
+            ? new FixtureHttpClient($this->config->rootPath . '/tests/fixtures/itunes', ItunesFixtures::mapper())
+            : new CurlHttpClient());
+
+        return $this->itunes = new ItunesClient(
+            http: $http,
+            limiter: new RateLimiter($this->db()),
+            cache: new ApiCache($this->db()),
+            usage: new UsageCounter($this->db()),
+            country: $this->config->itunesCountry,
+            minIntervalSeconds: $fixture ? 0.0 : $this->config->itunesMinIntervalMs / 1000,
+        );
+    }
+
+    public function matches(): MatchRepository
+    {
+        return new MatchRepository($this->db());
+    }
+
+    public function recordingMatcher(): RecordingMatcher
+    {
+        return new RecordingMatcher($this->itunes());
+    }
+
     public function songs(): SongRepository
     {
         return new SongRepository($this->db());
@@ -89,7 +125,10 @@ final class Services
             new SetlistMatcher($client),
             $this->songs(),
             new SongExtractor($client, $this->songs()),
+            $this->matches(),
+            $this->recordingMatcher(),
             $this->config->setlistFmMode,
+            $this->config->itunesMode,
         );
     }
 }

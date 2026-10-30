@@ -254,22 +254,25 @@ All corrections are durable and survive cache purges and rebuilds.
 - Results include `trackId`, `artistId`, `collectionId`, `trackName`, `artistName`, `collectionName`, `trackTimeMillis`, `trackViewUrl`, `artworkUrl100`, `releaseDate`, `trackExplicitness`.
 - No ISRC in results.
 - Promotional content (artwork, previews) is for promoting store content; previews need "provided courtesy of iTunes" attribution and must not be downloaded or cached. **v1 shows artwork linked to the Apple Music page and doesn't play previews.**
-- [Unverified] `trackId` equals the Apple Music catalog song ID. Confirm in Phase 4 by opening a few `trackViewUrl`s; needed for future direct playlist creation.
+- `trackId` equals the Apple Music catalog song ID [Verified 2026-10-30: `music.apple.com/us/song/{trackId}` opens the same song].
+- An empty search is `200` with `resultCount: 0`. Terms match loosely, so every result is scored, never trusted.
 
 ### 8.2 Search and scoring
 For each song:
 1. Choose the target artist: the performer. (For covers, the performer first; see §8.3.)
-2. Query `term="{artist} {title}"`, `entity=song`, `limit=25`. Cache by normalized query string (no TTL needed for iTunes responses in v1; manual refresh available).
+2. Query `term="{artist} {title}"`, `entity=song`, `limit=50` (25 can miss a track when the artist has many popular songs). Only if nothing by the performer comes back: query the title alone (artists named differently on Apple Music), then, for covers, `"{original artist} {title}"`. Responses are cached by URL until the iTunes data source changes; "search again" on a song runs a fresh query with the user's own terms.
 3. Score each candidate:
    - Artist match: exact normalized match is required for "high" confidence; "feat."/"&" variants allowed.
    - Title similarity on normalized titles (exact > prefix/suffix qualifier only > fuzzy).
    - Recording type from title/collection keywords: `live`, `acoustic`, `remix`, `demo`, `instrumental`, `karaoke`, `sped up`, `slowed`, `version`, `remaster`, `re-recorded`, `(taylor's version)`-style. Studio preferred; remaster counts as studio.
-   - Penalize compilations and karaoke/tribute artists.
+   - Penalize compilations (`collectionArtistName` "Various Artists", or names like "Greatest Hits") and karaoke/tribute artists.
    - Among equal studio candidates, prefer the earliest `releaseDate` original album over singles/deluxe duplicates, unless only the single exists.
 4. Confidence:
    - **High** — exact artist + exact normalized title + studio. Auto-accepted, reviewable in bulk.
    - **Medium** — anything weaker that still matched artist. Goes to review.
    - **None** — no candidate by the performer. Goes to the unmatched queue.
+   - A search with the user's own terms never auto-accepts; its best result goes to review.
+   - Matching runs as the scan's fourth stage at `ITUNES_MIN_INTERVAL_MS` (default 3000, about 20/minute). A throttled answer (403/429/503) waits 60s and retries; if it keeps happening the scan pauses and resumes on the next run.
 
 ### 8.3 Covers [Decision]
 For a cover (song has `original_artist_id`):
@@ -280,11 +283,11 @@ For a cover (song has `original_artist_id`):
 If two songs end up with the same `trackId`, export lists it once; the library still shows both songs.
 
 ### 8.4 Match review screen
-- Tabs with counts: Auto-matched · Needs review · Unmatched · Covers without recording · Excluded.
-- Auto-matched: compact grid of artwork + title, filterable; "approve all" button.
+- Tabs with counts: Needs review · Unmatched · Covers without recording · Auto-matched · Confirmed · Excluded. Opens on the first tab with work in it.
+- Auto-matched: compact grid of artwork + title, filterable; "Not right" sends one back to review; "confirm all" moves the rest to Confirmed.
 - Needs review / unmatched: one row per song with current pick, up to 5 alternatives, recording-type badge, "search again with custom terms", exclude, and contributing concerts.
 - Keyboard: `j/k` move, `1–5` pick alternative, `x` exclude, `enter` accept.
-- Every decision is saved immediately.
+- Every decision is saved immediately. A recording the user picked is never replaced by a rescan, and a song with one isn't pruned when its setlists change (like excluded songs).
 
 ### 8.5 Deferred: direct Apple Music playlist creation
 Requires an Apple Developer Program membership (paid). From the docs [Verified]:

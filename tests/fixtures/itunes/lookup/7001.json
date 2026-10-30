@@ -1,0 +1,51 @@
+{
+    "resultCount": 4,
+    "results": [
+        {
+            "wrapperType": "artist",
+            "artistType": "Artist",
+            "artistName": "Paper Satellites",
+            "artistId": 7001,
+            "primaryGenreName": "Alternative"
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 7001,
+            "trackId": 900061,
+            "artistName": "Paper Satellites",
+            "collectionName": "Orbiters",
+            "trackName": "Orbit",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/2?i=900061",
+            "releaseDate": "2019-04-04T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 210000
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 7001,
+            "trackId": 900062,
+            "artistName": "Paper Satellites",
+            "collectionName": "Live at the Fixture Hall",
+            "trackName": "Orbit (Live at the Fixture Hall)",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/2?i=900062",
+            "releaseDate": "2022-10-10T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 210000
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 7001,
+            "trackId": 900063,
+            "artistName": "Paper Satellites",
+            "collectionName": "Orbiters",
+            "trackName": "Ground Control",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/2?i=900063",
+            "releaseDate": "2019-04-04T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 210000
+        }
+    ]
+}

@@ -66,7 +66,7 @@ final class ScanTest extends TestCase
         $job = $this->scan();
 
         $this->assertSame('done', $job['status']);
-        $this->assertSame('songs', $job['stage']);
+        $this->assertSame('matches', $job['stage']);
 
         // Artists
         $this->assertSame('resolved', $this->artist('The Midnight Arcade')['resolution']);
@@ -103,7 +103,7 @@ final class ScanTest extends TestCase
         $this->assertSame(
             ['pending' => 0, 'matched' => 3, 'ambiguous' => 2, 'missing' => 2, 'empty' => 0, 'error' => 0, 'total' => 7,
              'artists_ambiguous' => 0, 'artists_not_found' => 1, 'songs' => 7],
-            $job['result'],
+            array_diff_key($job['result'], array_flip(['review', 'unmatched', 'covers', 'auto', 'chosen', 'excluded', 'unsearched'])),
         );
     }
 
@@ -273,5 +273,71 @@ final class ScanTest extends TestCase
         $queue->claimNext();
         $this->assertSame(1, $queue->requeueInterrupted());
         $this->assertSame('queued', $queue->find($first)['status']);
+    }
+
+    /** @return array<string, array<string, mixed>> song title → status, picked track and candidate track ids */
+    private function matches(): array
+    {
+        $rows = $this->pdo->query(
+            'SELECT s.title_display, m.status, m.confidence, r.track_id,
+                    (SELECT group_concat(r2.track_id) FROM (SELECT recording_id FROM song_candidates c WHERE c.song_id = s.id ORDER BY c.rank) c
+                     JOIN recordings r2 ON r2.id = c.recording_id) AS candidates
+             FROM songs s LEFT JOIN song_matches m ON m.song_id = s.id LEFT JOIN recordings r ON r.id = m.recording_id'
+        )->fetchAll();
+
+        return array_column($rows, null, 'title_display');
+    }
+
+    public function testScanMatchesSongsToRecordings(): void
+    {
+        $job = $this->scan();
+        $this->assertSame(['review' => 2, 'unmatched' => 1, 'covers' => 1, 'auto' => 3],
+            array_intersect_key($job['result'], array_flip(['review', 'unmatched', 'covers', 'auto'])));
+
+        $m = $this->matches();
+        $this->assertSame('auto', $m['Neon Hours']['status']);
+        $this->assertSame(900001, (int) $m['Neon Hours']['track_id'], 'the original album beats the earlier single');
+        $this->assertSame('900001,900002,900003,900004', $m['Neon Hours']['candidates']);
+        $this->assertSame(900021, (int) $m['Night Drive']['track_id'], 'the studio album beats the greatest-hits copy');
+        $this->assertSame('900021,900022', $m['Night Drive']['candidates'], 'the clean edition of the same album track is folded in');
+
+        $this->assertSame('review', $m['Static Love']['status'], 'only a live version: never accepted automatically');
+        $this->assertSame(900011, (int) $m['Static Love']['track_id']);
+        $this->assertSame('review', $m['Low Earth']['status'], 'a similar title needs a look');
+
+        $this->assertSame('unmatched', $m['Heart of Glass']['status']);
+        $this->assertSame(null, $m['Heart of Glass']['track_id'], 'the original artist’s version is offered, not picked');
+        $this->assertSame('900031,900033,900032', $m['Heart of Glass']['candidates'], 'searched by title, then the original artist; no duplicates');
+        $this->assertSame('auto', $m['Orbit']['status'], 'found in the artist’s catalog though search misses it');
+        $this->assertSame('900061,900062', $m['Orbit']['candidates'], 'the same-named tribute band isn’t looked up');
+        $this->assertSame('unmatched', $m['Signal Fire']['status']);
+    }
+
+    public function testChosenRecordingsSurviveRescansAndSourceSwitches(): void
+    {
+        $this->scan();
+        $matches = $this->services->matches();
+        $staticLove = (int) $this->pdo->query("SELECT id FROM songs WHERE title_display = 'Static Love'")->fetchColumn();
+        $acoustic = (int) $this->pdo->query('SELECT id FROM recordings WHERE track_id = 900012')->fetchColumn();
+        $matches->choose($staticLove, $acoustic);
+
+        $this->scan();
+        $matches->resetIfSourceChanged('live');
+        $m = $this->matches();
+        $this->assertSame('chosen', $m['Static Love']['status']);
+        $this->assertSame(900012, (int) $m['Static Love']['track_id']);
+        $this->assertSame(null, $m['Neon Hours']['status'], 'automatic matches are cleared when the data source changes');
+        $this->assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM api_cache WHERE provider = 'itunes'")->fetchColumn());
+    }
+
+    public function testExcludedSongsAreNotSearched(): void
+    {
+        $this->scan();
+        $this->pdo->exec('DELETE FROM song_matches');
+        $this->pdo->exec("UPDATE songs SET excluded = 1 WHERE title_display = 'Signal Fire'");
+
+        $this->scan();
+        $this->assertSame(null, $this->matches()['Signal Fire']['status']);
+        $this->assertSame('auto', $this->matches()['Neon Hours']['status']);
     }
 }

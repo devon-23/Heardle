@@ -17,6 +17,12 @@ final class TitleNormalizer
 
     private const ROMAN = ['i' => 1, 'ii' => 2, 'iii' => 3, 'iv' => 4, 'v' => 5, 'vi' => 6, 'vii' => 7, 'viii' => 8, 'ix' => 9, 'x' => 10];
 
+    /** The title without a trailing "(acoustic)"-style label, e.g. for searching. */
+    public static function withoutVersionLabel(string $title): string
+    {
+        return trim((string) preg_replace(self::VERSION_LABEL, '', $title));
+    }
+
     /** @return array{key: string, variant: ?string} */
     public static function normalize(string $title): array
     {

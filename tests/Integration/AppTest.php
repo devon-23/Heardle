@@ -252,6 +252,61 @@ final class AppTest extends TestCase
         $this->assertSame(404, $this->get("/songs/$id")->status, 'merged-away song is gone');
     }
 
+    public function testMatchReviewPagesAndActions(): void
+    {
+        $this->post('/import/confirm', ['file' => $this->uploadSample()]);
+        $services = new \HeardLive\Services(Config::fromArray([], dirname(__DIR__, 2)), $this->pdo);
+        $jobId = $services->jobs()->enqueue('scan');
+        $services->jobs()->claimNext();
+        $services->scanJob()->run($jobId);
+        $song = fn (string $title) => (int) $this->pdo->query("SELECT id FROM songs WHERE title_display = '$title'")->fetchColumn();
+        $status = fn (string $title) => $this->pdo->query("SELECT status FROM song_matches WHERE song_id = {$song($title)}")->fetchColumn();
+        $track = fn (int $trackId) => (int) $this->pdo->query("SELECT id FROM recordings WHERE track_id = $trackId")->fetchColumn();
+
+        $page = $this->get('/matches');
+        $this->assertSame(200, $page->status);
+        $this->assertContains('Needs review <span class="chip__count">2</span>', $page->body);
+        $this->assertContains('Static Love (Acoustic)', $page->body, 'the review queue opens first and shows alternatives');
+        $this->assertContains('data-pick="2"', $page->body);
+        $this->assertContains('https://music.apple.com/us/album/fixture/1?i=900011', $page->body);
+        $this->assertContains('original by Blondie', $this->get('/matches', ['tab' => 'covers'])->body);
+        $this->assertContains('Confirm all 3', $this->get('/matches', ['tab' => 'auto'])->body);
+        $this->assertSame(200, $this->get('/matches', ['tab' => 'nonsense', 'page' => '99'])->status);
+
+        // Picking an alternative saves at once, as JSON for the keyboard queue…
+        $response = $this->post("/matches/{$song('Static Love')}/choose", ['recording' => (string) $track(900012)], json: true);
+        $this->assertSame(200, $response->status);
+        $this->assertSame('chosen', $status('Static Love'));
+        // …but only from the song's own options.
+        $this->assertSame(422, $this->post("/matches/{$song('Static Love')}/choose", ['recording' => (string) $track(900001)], json: true)->status);
+
+        // Without JavaScript, forms come back to the same list.
+        $response = $this->post("/matches/{$song('Low Earth')}/accept", ['tab' => 'review']);
+        $this->assertSame("/matches?tab=review#song-{$song('Low Earth')}", $response->headers['Location']);
+        $this->assertSame('chosen', $status('Low Earth'));
+
+        $this->post("/matches/{$song('Heart of Glass')}/choose", ['recording' => (string) $track(900031)]);
+        $this->assertSame('chosen', $status('Heart of Glass'), 'using the original artist’s version');
+
+        $this->post("/matches/{$song('Orbit')}/exclude", ['excluded' => '1'], json: true);
+        $this->assertContains('Excluded <span class="chip__count">1</span>', $this->get('/matches')->body);
+
+        $this->post("/matches/{$song('Night Drive')}/reopen", ['tab' => 'auto']);
+        $this->assertSame('review', $status('Night Drive'));
+        $this->assertSame('/matches?tab=chosen', $this->post('/matches/approve-all')->headers['Location']);
+        $this->assertSame('chosen', $status('Neon Hours'));
+
+        // A search with the user's own terms; the song shows up again wherever it landed.
+        $response = $this->post("/matches/{$song('Signal Fire')}/search", ['terms' => 'signal fire', 'tab' => 'unmatched']);
+        $this->assertSame('/matches?tab=unmatched&q=Signal+Fire#song-' . $song('Signal Fire'), $response->headers['Location']);
+        $this->assertSame('signal fire', $this->pdo->query("SELECT search_terms FROM song_matches WHERE song_id = {$song('Signal Fire')}")->fetchColumn());
+
+        $show = $this->get("/songs/{$song('Static Love')}")->body;
+        $this->assertContains('On Apple Music', $show);
+        $this->assertContains('your pick', $show);
+        $this->assertContains('name="from" value="song"', $show);
+    }
+
     public function testReviewClearsAttentionAndFiltersWork(): void
     {
         $this->post('/import/confirm', ['file' => $this->uploadSample()]);

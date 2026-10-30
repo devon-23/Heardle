@@ -210,11 +210,15 @@ final class SongRepository
         return $stmt->fetchAll();
     }
 
-    /** Deletes songs no setlist mentions any more. Excluded songs stay so the choice applies if they come back. */
+    /**
+     * Deletes songs no setlist mentions any more. Excluded songs and songs with a recording the user
+     * chose stay, so those choices apply again if the song comes back.
+     */
     public function pruneOrphans(): int
     {
         return (int) $this->pdo->exec(
-            'DELETE FROM songs WHERE excluded = 0 AND NOT EXISTS (SELECT 1 FROM song_performances sp WHERE sp.song_id = songs.id)'
+            "DELETE FROM songs WHERE excluded = 0 AND NOT EXISTS (SELECT 1 FROM song_performances sp WHERE sp.song_id = songs.id)
+               AND NOT EXISTS (SELECT 1 FROM song_matches m WHERE m.song_id = songs.id AND m.status = 'chosen')"
         );
     }
 

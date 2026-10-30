@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace HeardLive\Jobs;
 
+use HeardLive\Matching\ItunesException;
+use HeardLive\Matching\MatchRepository;
+use HeardLive\Matching\RecordingMatcher;
 use HeardLive\Setlists\ArtistResolver;
 use HeardLive\Setlists\ScanRepository;
 use HeardLive\Setlists\SetlistFmException;
@@ -12,13 +15,13 @@ use HeardLive\Songs\SongExtractor;
 use HeardLive\Songs\SongRepository;
 
 /**
- * The scan pipeline: artists → setlists → songs. Each stage only touches items that still
+ * The scan pipeline: artists → setlists → songs → matches. Each stage only touches items that still
  * need work, so a scan that stops part way (cancel, crash, rate budget) resumes cleanly next time.
  */
 final class ScanJob
 {
     public const TYPE = 'scan';
-    public const STAGES = ['artists', 'setlists', 'songs'];
+    public const STAGES = ['artists', 'setlists', 'songs', 'matches'];
 
     public function __construct(
         private JobQueue $queue,
@@ -27,25 +30,33 @@ final class ScanJob
         private SetlistMatcher $matcher,
         private SongRepository $songs,
         private SongExtractor $extractor,
+        private MatchRepository $matches,
+        private RecordingMatcher $recordings,
         private string $source,
+        private string $itunesSource,
     ) {
     }
 
     public function run(int $jobId): void
     {
         $this->repo->resetIfSourceChanged($this->source);
+        $this->matches->resetIfSourceChanged($this->itunesSource);
         $this->repo->markPerformancesOfMissingArtists();
 
         try {
-            if (!$this->resolveArtists($jobId) || !$this->matchSetlists($jobId) || !$this->extractSongs($jobId)) {
+            if (!$this->resolveArtists($jobId) || !$this->matchSetlists($jobId) || !$this->extractSongs($jobId) || !$this->matchRecordings($jobId)) {
                 return; // canceled
             }
         } catch (SetlistFmException $e) {
             $this->queue->fail($jobId, $e->getMessage(), $e->kind === 'budget' ? 'paused' : 'failed', $this->repo->coverage());
             return;
+        } catch (ItunesException $e) {
+            // Everything before this stage is saved; scanning again carries on matching.
+            $this->queue->fail($jobId, $e->getMessage(), 'paused', $this->repo->coverage());
+            return;
         }
 
-        $this->queue->finish($jobId, $this->repo->coverage() + ['songs' => $this->songs->stats()['songs']]);
+        $this->queue->finish($jobId, $this->repo->coverage() + ['songs' => $this->songs->stats()['songs']] + $this->matches->counts());
     }
 
     private function resolveArtists(int $jobId): bool
@@ -73,6 +84,16 @@ final class ScanJob
         return $finished;
     }
 
+    private function matchRecordings(int $jobId): bool
+    {
+        $label = fn (array $song) => $song['title_display'] . ' · ' . $song['performer'];
+
+        // A failed search leaves the song unmatched, so the next scan retries it.
+        return $this->each($jobId, 'matches', $this->matches->songsToMatch(), $label, function (array $song): void {
+            $this->matches->save((int) $song['id'], $this->recordings->match($song));
+        });
+    }
+
     /**
      * Runs $work over $items with progress and cancel checks. Errors that stop the scan are rethrown;
      * other API errors go to $onError (or are skipped) so one bad item doesn't end the run.
@@ -89,7 +110,7 @@ final class ScanJob
             $this->queue->progress($jobId, $stage, $i, $total, $label($item));
             try {
                 $work($item);
-            } catch (SetlistFmException $e) {
+            } catch (SetlistFmException|ItunesException $e) {
                 if ($e->stopsTheScan()) {
                     throw $e;
                 }

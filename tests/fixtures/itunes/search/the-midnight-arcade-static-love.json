@@ -1,0 +1,37 @@
+{
+    "resultCount": 2,
+    "results": [
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 335324,
+            "collectionId": 802993,
+            "trackId": 900011,
+            "artistName": "The Midnight Arcade",
+            "collectionName": "Live at Harbor Pavilion",
+            "trackName": "Static Love (Live)",
+            "trackCensoredName": "Static Love (Live)",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900011",
+            "releaseDate": "2023-06-01T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200011,
+            "primaryGenreName": "Alternative"
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 335324,
+            "collectionId": 740788,
+            "trackId": 900012,
+            "artistName": "The Midnight Arcade",
+            "collectionName": "Static Love (Acoustic) - Single",
+            "trackName": "Static Love (Acoustic)",
+            "trackCensoredName": "Static Love (Acoustic)",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900012",
+            "releaseDate": "2022-02-14T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200012,
+            "primaryGenreName": "Alternative"
+        }
+    ]
+}

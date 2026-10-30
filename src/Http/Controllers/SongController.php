@@ -8,13 +8,14 @@ use HeardLive\Http\Controller;
 use HeardLive\Http\Request;
 use HeardLive\Http\Response;
 use HeardLive\Http\View;
+use HeardLive\Matching\MatchRepository;
 use HeardLive\Songs\SongRepository;
 use InvalidArgumentException;
 
 /** The song library: every unique song you've heard live, and where. */
 final class SongController extends Controller
 {
-    public function __construct(View $view, private SongRepository $songs)
+    public function __construct(View $view, private SongRepository $songs, private MatchRepository $matches)
     {
         parent::__construct($view);
     }
@@ -49,6 +50,8 @@ final class SongController extends Controller
         return $this->page('songs/show', $song['title_display'], [
             'song' => $song,
             'mergeTargets' => $this->songs->mergeTargets($song),
+            'match' => $this->matches->forSong((int) $song['id']),
+            'searchFailed' => $request->queryString('error') === 'search',
             'merged' => isset($request->query['merged']),
         ]);
     }

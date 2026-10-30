@@ -63,6 +63,8 @@ final class JobQueue
     {
         $this->pdo->prepare('UPDATE jobs SET stage = ?, done = ?, total = ?, current_label = ?, updated_at = ? WHERE id = ?')
             ->execute([$stage, $done, $total, $label, gmdate('c'), $id]);
+        // Progress doubles as a check-in, so a long job doesn't look like a stopped worker.
+        $this->heartbeat();
     }
 
     public function finish(int $id, array $result): void

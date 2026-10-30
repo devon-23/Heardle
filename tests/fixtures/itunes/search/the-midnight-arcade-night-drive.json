@@ -1,0 +1,53 @@
+{
+    "resultCount": 3,
+    "results": [
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 335324,
+            "collectionId": 262596,
+            "trackId": 900022,
+            "artistName": "The Midnight Arcade",
+            "collectionName": "Greatest Hits",
+            "trackName": "Night Drive",
+            "trackCensoredName": "Night Drive",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900022",
+            "releaseDate": "2024-05-01T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200022,
+            "primaryGenreName": "Alternative"
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 335324,
+            "collectionId": 252398,
+            "trackId": 900021,
+            "artistName": "The Midnight Arcade",
+            "collectionName": "Signal Lights",
+            "trackName": "Night Drive (feat. Low Tide Choir)",
+            "trackCensoredName": "Night Drive (feat. Low Tide Choir)",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900021",
+            "releaseDate": "2021-03-05T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200021,
+            "primaryGenreName": "Alternative"
+        },
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 335324,
+            "collectionId": 252398,
+            "trackId": 900023,
+            "artistName": "The Midnight Arcade",
+            "collectionName": "Signal Lights",
+            "trackName": "Night Drive (feat. Low Tide Choir)",
+            "trackCensoredName": "Night Drive (feat. Low Tide Choir)",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900023",
+            "releaseDate": "2021-03-05T07:00:00Z",
+            "trackExplicitness": "cleaned",
+            "trackTimeMillis": 200021,
+            "primaryGenreName": "Alternative"
+        }
+    ]
+}

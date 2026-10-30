@@ -7,17 +7,20 @@ namespace HeardLive;
 use HeardLive\Concerts\EventRepository;
 use HeardLive\Http\Controllers\ConcertController;
 use HeardLive\Http\Controllers\ImportController;
+use HeardLive\Http\Controllers\MatchController;
 use HeardLive\Http\Controllers\ScanController;
 use HeardLive\Http\Controllers\SongController;
-use HeardLive\Songs\SongRepository;
 use HeardLive\Http\Csrf;
 use HeardLive\Http\Request;
 use HeardLive\Http\Response;
 use HeardLive\Http\Router;
 use HeardLive\Http\View;
 use HeardLive\Import\UploadStore;
+use HeardLive\Matching\MatchRepository;
+use HeardLive\Songs\SongRepository;
 use HeardLive\Support\Config;
 use HeardLive\Support\Db;
+use HeardLive\Support\Http\HttpClient;
 use PDO;
 use Throwable;
 
@@ -38,6 +41,7 @@ final class App
         private Config $config,
         private ?PDO $pdo = null,
         private ?UploadStore $uploads = null,
+        private ?HttpClient $itunesHttp = null,
     ) {
         $this->view = new View($config->rootPath . '/views');
         $this->router = new Router();
@@ -100,11 +104,33 @@ final class App
         $this->router->get('/songs/{id}', fn (Request $r, array $p) => $this->songs()->show($r, $p));
         $this->router->post('/songs/{id}/exclude', fn (Request $r, array $p) => $this->songs()->exclude($r, $p));
         $this->router->post('/songs/{id}/merge', fn (Request $r, array $p) => $this->songs()->merge($r, $p));
+
+        $this->router->get('/matches', fn (Request $r) => $this->matches()->index($r));
+        $this->router->post('/matches/approve-all', fn (Request $r) => $this->matches()->approveAll($r));
+        $this->router->post('/matches/{id}/choose', fn (Request $r, array $p) => $this->matches()->choose($r, $p));
+        $this->router->post('/matches/{id}/accept', fn (Request $r, array $p) => $this->matches()->accept($r, $p));
+        $this->router->post('/matches/{id}/reopen', fn (Request $r, array $p) => $this->matches()->reopen($r, $p));
+        $this->router->post('/matches/{id}/exclude', fn (Request $r, array $p) => $this->matches()->exclude($r, $p));
+        $this->router->post('/matches/{id}/search', fn (Request $r, array $p) => $this->matches()->search($r, $p));
     }
 
     private function songs(): SongController
     {
-        return new SongController($this->view, new SongRepository($this->db()));
+        return new SongController($this->view, new SongRepository($this->db()), new MatchRepository($this->db()));
+    }
+
+    private function matches(): MatchController
+    {
+        $services = new Services($this->config, $this->db(), itunesHttp: $this->itunesHttp);
+
+        return new MatchController(
+            $this->view,
+            $services->matches(),
+            $services->songs(),
+            fn () => $services->recordingMatcher(),
+            $services->jobs(),
+            $this->config->itunesMode,
+        );
     }
 
     private function db(): PDO

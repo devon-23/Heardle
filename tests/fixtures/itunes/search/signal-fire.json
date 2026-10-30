@@ -1,0 +1,21 @@
+{
+    "resultCount": 1,
+    "results": [
+        {
+            "wrapperType": "track",
+            "kind": "song",
+            "artistId": 870347,
+            "collectionId": 238565,
+            "trackId": 900051,
+            "artistName": "Northern Static",
+            "collectionName": "Beacons",
+            "trackName": "Signal Fire",
+            "trackCensoredName": "Signal Fire",
+            "trackViewUrl": "https://music.apple.com/us/album/fixture/1?i=900051",
+            "releaseDate": "2016-08-08T07:00:00Z",
+            "trackExplicitness": "notExplicit",
+            "trackTimeMillis": 200051,
+            "primaryGenreName": "Alternative"
+        }
+    ]
+}

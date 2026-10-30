@@ -4,14 +4,14 @@ use HeardLive\Http\Csrf;
 
 $active = $job !== null && in_array($job['status'], ['queued', 'running'], true);
 $stage = $job['stage'] ?? null;
-$stages = ['artists' => 'Artists', 'setlists' => 'Setlists', 'songs' => 'Songs'];
+$stages = ['artists' => 'Artists', 'setlists' => 'Setlists', 'songs' => 'Songs', 'matches' => 'Apple Music'];
 
 // Initial meter state; app.js keeps it current while the scan runs.
-$meter = function (string $key) use ($job, $stage): array {
+$meter = function (string $key) use ($job, $stage, $stages): array {
     if ($job === null || $stage === null) {
         return [0, ''];
     }
-    $order = ['artists' => 0, 'setlists' => 1, 'songs' => 2];
+    $order = array_flip(array_keys($stages));
     if ($order[$key] < $order[$stage]) {
         return [100, 'done'];
     }
@@ -39,7 +39,7 @@ $noSetlist = $coverage['missing'] + $coverage['empty'];
     <div class="container narrow">
         <p class="eyebrow">Step 3 · Setlists</p>
         <h1 class="page-title">Find your setlists</h1>
-        <p class="lead">For every act you saw, Heard Live looks on setlist.fm for that exact date and city. It goes about one request a second, so a full history takes a few minutes.</p>
+        <p class="lead">For every act you saw, Heard Live looks on setlist.fm for that exact date and city. It goes about one request a second, so a full history takes a few minutes. Then it searches Apple Music for each song; Apple allows about 20 searches a minute, so the first full match takes longer (around an hour for 1,000+ songs). Both pick up where they stopped.</p>
 
         <?php if ($mode === 'fixture'): ?>
             <p class="alert">Using saved test data, not setlist.fm. To scan for real, add your API key to <span class="mono">.env</span> and set <span class="mono">SETLISTFM_MODE=live</span>.</p>
@@ -90,6 +90,7 @@ $noSetlist = $coverage['missing'] + $coverage['empty'];
         <div class="actions">
             <?php if ($coverage['matched'] > 0): ?>
                 <a class="button button--ghost" href="/songs">See your songs</a>
+                <a class="button button--ghost" href="/matches">Review Apple Music matches</a>
             <?php endif ?>
             <?php if ($needChoice > 0): ?>
                 <a class="button button--primary" href="/concerts?filter=attention">Make <?= e($needChoice) ?> <?= $needChoice === 1 ? 'choice' : 'choices' ?></a>

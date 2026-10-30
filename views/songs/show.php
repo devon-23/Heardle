@@ -1,5 +1,5 @@
 <?php
-/** @var array $song @var list<array> $mergeTargets @var bool $merged */
+/** @var array $song @var list<array> $mergeTargets @var bool $merged @var ?array $match @var bool $searchFailed */
 use HeardLive\Concerts\EventPresenter;
 use HeardLive\Http\Csrf;
 
@@ -59,6 +59,20 @@ $heard = count($performances);
                     </li>
                 <?php endforeach ?>
             </ol>
+        <?php endif ?>
+
+        <h2 class="section-heading" id="apple-music">On Apple Music</h2>
+        <?php if ($searchFailed): ?>
+            <p class="alert alert--error" role="alert">Apple Music didn’t answer that search. Wait a minute and try again.</p>
+        <?php endif ?>
+        <?php if ($match === null): ?>
+            <p class="empty">Not searched yet<?= $song['excluded'] ? ': excluded songs are skipped' : '. The next scan looks it up' ?>.</p>
+        <?php else: ?>
+            <?= $view->partial('matches/_song', [
+                'song' => $match + array_intersect_key($song, array_flip(['title_display', 'performer', 'original_artist_name', 'excluded'])),
+                'back' => ['from' => 'song'],
+                'showSong' => false,
+            ]) ?>
         <?php endif ?>
 
         <h2 class="section-heading">Fix this song</h2>

@@ -21,12 +21,14 @@ final readonly class Config
         public int $setlistCacheTtlHours,
         public int $setlistFmMinIntervalMs = 1000,
         public int $setlistFmDailyBudget = 1000,
+        public int $itunesMinIntervalMs = 3000,
     ) {
     }
 
     private const KEYS = [
         'APP_ENV', 'DB_PATH', 'SETLISTFM_API_KEY', 'SETLISTFM_MODE', 'ITUNES_MODE', 'ITUNES_COUNTRY',
         'SETLIST_CACHE_TTL_HOURS', 'SETLISTFM_MIN_INTERVAL_MS', 'SETLISTFM_DAILY_BUDGET',
+        'ITUNES_MIN_INTERVAL_MS',
     ];
 
     /** Reads .env; real environment variables win, e.g. `DB_PATH=storage/demo.sqlite bin/dev`. */
@@ -61,7 +63,12 @@ final readonly class Config
         }
         $interval = $env['SETLISTFM_MIN_INTERVAL_MS'] ?? '1000';
         $budget = $env['SETLISTFM_DAILY_BUDGET'] ?? '1000';
-        foreach (['SETLIST_CACHE_TTL_HOURS' => $ttl, 'SETLISTFM_MIN_INTERVAL_MS' => $interval, 'SETLISTFM_DAILY_BUDGET' => $budget] as $name => $value) {
+        $itunesInterval = $env['ITUNES_MIN_INTERVAL_MS'] ?? '3000';
+        $numbers = [
+            'SETLIST_CACHE_TTL_HOURS' => $ttl, 'SETLISTFM_MIN_INTERVAL_MS' => $interval,
+            'SETLISTFM_DAILY_BUDGET' => $budget, 'ITUNES_MIN_INTERVAL_MS' => $itunesInterval,
+        ];
+        foreach ($numbers as $name => $value) {
             if (!ctype_digit($value) || (int) $value < 1) {
                 throw new InvalidArgumentException("$name must be a positive whole number");
             }
@@ -83,6 +90,7 @@ final readonly class Config
             setlistCacheTtlHours: (int) $ttl,
             setlistFmMinIntervalMs: (int) $interval,
             setlistFmDailyBudget: (int) $budget,
+            itunesMinIntervalMs: (int) $itunesInterval,
         );
     }
 
