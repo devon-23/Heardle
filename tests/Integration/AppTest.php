@@ -220,6 +220,38 @@ final class AppTest extends TestCase
         $this->assertTrue(!str_contains($this->get('/concerts', ['filter' => 'attention'])->body, 'Setlist for Quiet Engines'));
     }
 
+    public function testSongLibraryPagesAndActions(): void
+    {
+        $this->post('/import/confirm', ['file' => $this->uploadSample()]);
+        $services = new \HeardLive\Services(\HeardLive\Support\Config::fromArray([], dirname(__DIR__, 2)), $this->pdo);
+        $jobId = $services->jobs()->enqueue('scan');
+        $services->jobs()->claimNext();
+        $services->scanJob()->run($jobId);
+
+        $index = $this->get('/songs');
+        $this->assertSame(200, $index->status);
+        $this->assertContains('Neon Hours', $index->body);
+        $this->assertContains('cover of Blondie', $index->body);
+        $this->assertContains('Heard the most', $index->body);
+        $search = $this->get('/songs', ['q' => 'orb'])->body;
+        $this->assertContains('Orbit', $search);
+        $this->assertContains('>1 song<', $search);
+        $this->assertSame(200, $this->get('/songs', ['show' => 'nonsense', 'sort' => 'nonsense'])->status, 'bad filters fall back');
+
+        $id = (int) $this->pdo->query("SELECT id FROM songs WHERE title_display = 'Neon Hours'")->fetchColumn();
+        $show = $this->get("/songs/$id");
+        $this->assertContains('Where you heard it', $show->body);
+        $this->assertContains('played ×2', $show->body);
+        $this->assertContains('https://www.setlist.fm/setlist/fixture/1a2b3c01.html', $show->body);
+
+        $this->assertSame("/songs/$id", $this->post("/songs/$id/exclude", ['excluded' => '1'])->headers['Location']);
+        $this->assertTrue(!str_contains($this->get('/songs')->body, '>Neon Hours<'));
+
+        $into = (int) $this->pdo->query("SELECT id FROM songs WHERE title_display = 'Night Drive'")->fetchColumn();
+        $this->assertSame("/songs/$into?merged=1", $this->post("/songs/$id/merge", ['into' => (string) $into])->headers['Location']);
+        $this->assertSame(404, $this->get("/songs/$id")->status, 'merged-away song is gone');
+    }
+
     public function testReviewClearsAttentionAndFiltersWork(): void
     {
         $this->post('/import/confirm', ['file' => $this->uploadSample()]);

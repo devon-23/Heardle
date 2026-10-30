@@ -6,7 +6,7 @@ The full plan is in [docs/BUILD_SPEC.md](docs/BUILD_SPEC.md).
 
 ## Status
 
-Phase 2 — CSV import, concert review, and the setlist scan: a background worker finds each attended performance's setlist on setlist.fm, and the review screen asks you to settle anything it couldn't decide. Live setlist.fm behavior still needs checking ([docs/VERIFICATION.md](docs/VERIFICATION.md)).
+Phase 3 — CSV import, concert review, the setlist scan (a background worker finds each attended performance's setlist on setlist.fm), and the song library: every unique song you heard, deduplicated, with the shows each came from. Exclude or merge songs from a song's page. Live API checks are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Scanning with real setlist.fm data
 

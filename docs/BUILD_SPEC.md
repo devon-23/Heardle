@@ -212,7 +212,7 @@ For each attended performance with a matched setlist, walk `sets[].song[]` [Veri
 - Skip entries with an empty name.
 - Record set index, position, encore number, `info`, `with` artist.
 - Repeated song in one setlist → one song-performance row, with `times_in_show` incremented.
-- Medley: if setlist.fm lists parts as separate entries, they're separate songs. If one entry looks like a medley (`info` or name contains "medley", or name contains " / "), flag it for review rather than splitting automatically.
+- Medley: setlist.fm writes medleys as one entry, "Song A / Song B". An entry with a **spaced** " / " is split into its songs, each flagged "from a medley" (changed from flag-only after the real data showed ~50 such entries that could never match a single track). Unspaced slashes stay whole, since titles like "Needing/Getting" and "Unknown/Nth" are single songs. An `info` mentioning "medley" also sets the flag.
 - Partial songs (`info` such as "snippet", "partial") count, with a `partial` flag shown in the library. User can exclude.
 
 ### 7.2 Song identity

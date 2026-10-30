@@ -93,7 +93,7 @@ document.addEventListener('change', (event) => {
 // ---------------------------------------------------------------------------
 const scan = document.querySelector('[data-job][data-job-id]');
 if (scan && ['queued', 'running'].includes(scan.dataset.jobStatus)) {
-  const order = ['artists', 'setlists'];
+  const order = ['artists', 'setlists', 'songs'];
   const setMeter = (key, pct, text, active) => {
     const meter = scan.querySelector(`[data-meter="${key}"]`);
     meter.querySelector('progress').value = pct;

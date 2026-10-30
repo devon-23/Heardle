@@ -77,6 +77,9 @@ final class ScanRepository
             $result['note'],
             $performanceId,
         ]);
+        // Songs from the previous setlist no longer apply; the next scan's songs stage refills them.
+        $this->pdo->prepare('DELETE FROM song_performances WHERE performance_id = ?')->execute([$performanceId]);
+        $this->pdo->prepare('UPDATE performances SET songs_setlist_id = NULL WHERE id = ?')->execute([$performanceId]);
     }
 
     public function markError(int $performanceId, string $message): void

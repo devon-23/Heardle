@@ -91,6 +91,10 @@ final class ScanController extends Controller
         } catch (InvalidArgumentException) {
             // Stale form (e.g. a rescan replaced the candidates): just show the current state.
         }
+        if ($choice !== 'none') {
+            // Pull the chosen setlist's songs into the library.
+            $this->jobs->enqueue(ScanJob::TYPE, ['mode' => $this->mode]);
+        }
 
         return Response::redirect($this->back($request));
     }

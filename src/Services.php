@@ -11,6 +11,8 @@ use HeardLive\Setlists\ScanRepository;
 use HeardLive\Setlists\SetlistFmClient;
 use HeardLive\Setlists\SetlistFmFixtures;
 use HeardLive\Setlists\SetlistMatcher;
+use HeardLive\Songs\SongExtractor;
+use HeardLive\Songs\SongRepository;
 use HeardLive\Support\ApiCache;
 use HeardLive\Support\Config;
 use HeardLive\Support\Db;
@@ -71,6 +73,11 @@ final class Services
         );
     }
 
+    public function songs(): SongRepository
+    {
+        return new SongRepository($this->db());
+    }
+
     public function scanJob(): ScanJob
     {
         $client = $this->setlistFm();
@@ -80,6 +87,8 @@ final class Services
             $this->scanRepository(),
             new ArtistResolver($client),
             new SetlistMatcher($client),
+            $this->songs(),
+            new SongExtractor($client, $this->songs()),
             $this->config->setlistFmMode,
         );
     }

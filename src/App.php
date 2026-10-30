@@ -8,6 +8,8 @@ use HeardLive\Concerts\EventRepository;
 use HeardLive\Http\Controllers\ConcertController;
 use HeardLive\Http\Controllers\ImportController;
 use HeardLive\Http\Controllers\ScanController;
+use HeardLive\Http\Controllers\SongController;
+use HeardLive\Songs\SongRepository;
 use HeardLive\Http\Csrf;
 use HeardLive\Http\Request;
 use HeardLive\Http\Response;
@@ -93,6 +95,16 @@ final class App
         $this->router->get('/api/jobs/{id}', fn (Request $r, array $p) => $this->scans()->status($r, $p));
         $this->router->post('/performances/{id}/setlist', fn (Request $r, array $p) => $this->scans()->chooseSetlist($r, $p));
         $this->router->post('/artists/{id}/choose', fn (Request $r, array $p) => $this->scans()->chooseArtist($r, $p));
+
+        $this->router->get('/songs', fn (Request $r) => $this->songs()->index($r));
+        $this->router->get('/songs/{id}', fn (Request $r, array $p) => $this->songs()->show($r, $p));
+        $this->router->post('/songs/{id}/exclude', fn (Request $r, array $p) => $this->songs()->exclude($r, $p));
+        $this->router->post('/songs/{id}/merge', fn (Request $r, array $p) => $this->songs()->merge($r, $p));
+    }
+
+    private function songs(): SongController
+    {
+        return new SongController($this->view, new SongRepository($this->db()));
     }
 
     private function db(): PDO

@@ -66,7 +66,7 @@ final class ScanTest extends TestCase
         $job = $this->scan();
 
         $this->assertSame('done', $job['status']);
-        $this->assertSame('setlists', $job['stage']);
+        $this->assertSame('songs', $job['stage']);
 
         // Artists
         $this->assertSame('resolved', $this->artist('The Midnight Arcade')['resolution']);
@@ -102,9 +102,92 @@ final class ScanTest extends TestCase
 
         $this->assertSame(
             ['pending' => 0, 'matched' => 3, 'ambiguous' => 2, 'missing' => 2, 'empty' => 0, 'error' => 0, 'total' => 7,
-             'artists_ambiguous' => 0, 'artists_not_found' => 1],
+             'artists_ambiguous' => 0, 'artists_not_found' => 1, 'songs' => 7],
             $job['result'],
         );
+    }
+
+    /** @return array<string, array<string, mixed>> "Performer — Title" → library row */
+    private function library(array $filters = []): array
+    {
+        $rows = $this->services->songs()->search($filters)['songs'];
+        $out = [];
+        foreach ($rows as $row) {
+            $out[$row['performer'] . ' — ' . $row['title_display']] = $row;
+        }
+        return $out;
+    }
+
+    public function testSongsAreExtractedOncePerSongWithEveryShowRemembered(): void
+    {
+        $this->scan();
+        $songs = $this->library();
+
+        $this->assertSame(7, count($songs));
+        $this->assertSame(2, (int) $songs['The Midnight Arcade — Neon Hours']['heard'], 'heard at two shows, listed once');
+        $this->assertSame(['2025-09-20', '2026-04-18'], [
+            $songs['The Midnight Arcade — Neon Hours']['first_heard'],
+            $songs['The Midnight Arcade — Neon Hours']['last_heard'],
+        ]);
+        $this->assertSame('Blondie', $songs['The Midnight Arcade — Heart of Glass']['original_artist_name']);
+        $this->assertTrue(!isset($songs['The Midnight Arcade — Intro']), 'tape intro skipped');
+
+        $neon = $this->services->songs()->find((int) $songs['The Midnight Arcade — Neon Hours']['id']);
+        $this->assertSame(2, count($neon['performances']));
+        $this->assertSame(2, (int) $neon['performances'][0]['times_in_show'], 'reprise at Harbor Pavilion');
+        $this->assertSame('https://www.setlist.fm/setlist/fixture/1a2b3c01.html', $neon['performances'][0]['setlist_url']);
+
+        // Openers filter: songs only heard from acts listed after the first.
+        $this->assertSame(['Paper Satellites'], array_values(array_unique(array_column($this->library(['show' => 'openers']), 'performer'))));
+        $this->assertSame(['Heart of Glass'], array_column($this->library(['show' => 'covers']), 'title_display'));
+        $this->assertSame(2, count($this->library(['show' => 'repeats'])));
+    }
+
+    public function testUntickingAPerformerHidesItsSongsAndChoosingASetlistAddsThem(): void
+    {
+        $this->scan();
+        $this->pdo->exec("UPDATE performances SET attended = 0, attended_source = 'user'
+                          WHERE artist_id = (SELECT id FROM artists WHERE name = 'Paper Satellites')");
+        $this->assertSame(4, count($this->library()));
+
+        $p = $this->performances();
+        $this->services->scanRepository()->chooseSetlist((int) $p['Quiet Engines @ 2025-09-20']['id'], '1a2b3c05');
+        $this->scan();
+        $songs = $this->library();
+        $this->assertTrue(isset($songs['Quiet Engines — Hum'], $songs['Quiet Engines — Overdrive']));
+        $this->assertTrue(!isset($songs['Quiet Engines — Idle']), 'only the chosen day’s songs');
+
+        // Changing your mind about the setlist swaps the songs, and the dropped song's row is cleaned up.
+        $this->services->scanRepository()->chooseSetlist((int) $p['Quiet Engines @ 2025-09-20']['id'], '1a2b3c04');
+        $this->scan();
+        $songs = $this->library();
+        $this->assertTrue(isset($songs['Quiet Engines — Idle']) && !isset($songs['Quiet Engines — Overdrive']));
+        $this->assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM songs WHERE title_display = 'Overdrive'")->fetchColumn());
+    }
+
+    public function testExcludeAndMergeSurviveRescans(): void
+    {
+        $this->scan();
+        $repo = $this->services->songs();
+        $songs = $this->library();
+
+        $repo->setExcluded((int) $songs['Paper Satellites — Orbit']['id'], true);
+        $repo->merge((int) $songs['The Midnight Arcade — Night Drive']['id'], (int) $songs['The Midnight Arcade — Static Love']['id']);
+
+        // Re-extract everything from scratch.
+        $this->pdo->exec('UPDATE performances SET songs_setlist_id = NULL');
+        $this->scan();
+
+        $songs = $this->library();
+        $this->assertTrue(!isset($songs['Paper Satellites — Orbit']));
+        $this->assertSame(1, count($this->library(['show' => 'excluded'])));
+        $this->assertTrue(!isset($songs['The Midnight Arcade — Night Drive']), 'merged title folded in again');
+        $this->assertSame(2, (int) $songs['The Midnight Arcade — Static Love']['heard']);
+
+        $this->assertThrows(\InvalidArgumentException::class, fn () => $repo->merge(
+            (int) $songs['The Midnight Arcade — Static Love']['id'],
+            (int) $songs['Paper Satellites — Signal Fire']['id'],
+        ));
     }
 
     public function testSecondScanDoesNoNewWork(): void

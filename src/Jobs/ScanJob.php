@@ -8,20 +8,25 @@ use HeardLive\Setlists\ArtistResolver;
 use HeardLive\Setlists\ScanRepository;
 use HeardLive\Setlists\SetlistFmException;
 use HeardLive\Setlists\SetlistMatcher;
+use HeardLive\Songs\SongExtractor;
+use HeardLive\Songs\SongRepository;
 
 /**
- * The scan pipeline. Each stage only touches items that still need work, so a scan
- * that stops part way (cancel, crash, rate budget) resumes cleanly next time.
+ * The scan pipeline: artists → setlists → songs. Each stage only touches items that still
+ * need work, so a scan that stops part way (cancel, crash, rate budget) resumes cleanly next time.
  */
 final class ScanJob
 {
     public const TYPE = 'scan';
+    public const STAGES = ['artists', 'setlists', 'songs'];
 
     public function __construct(
         private JobQueue $queue,
         private ScanRepository $repo,
         private ArtistResolver $resolver,
         private SetlistMatcher $matcher,
+        private SongRepository $songs,
+        private SongExtractor $extractor,
         private string $source,
     ) {
     }
@@ -32,7 +37,7 @@ final class ScanJob
         $this->repo->markPerformancesOfMissingArtists();
 
         try {
-            if (!$this->resolveArtists($jobId) || !$this->matchSetlists($jobId)) {
+            if (!$this->resolveArtists($jobId) || !$this->matchSetlists($jobId) || !$this->extractSongs($jobId)) {
                 return; // canceled
             }
         } catch (SetlistFmException $e) {
@@ -40,53 +45,64 @@ final class ScanJob
             return;
         }
 
-        $this->queue->finish($jobId, $this->repo->coverage());
+        $this->queue->finish($jobId, $this->repo->coverage() + ['songs' => $this->songs->stats()['songs']]);
     }
 
     private function resolveArtists(int $jobId): bool
     {
-        $artists = $this->repo->artistsToResolve();
-        $total = count($artists);
-        foreach ($artists as $i => $artist) {
-            if ($this->queue->isCanceled($jobId)) {
-                return false;
-            }
-            $this->queue->progress($jobId, 'artists', $i, $total, $artist['name']);
-            try {
-                $this->repo->saveArtist($artist['id'], $this->resolver->resolve($artist['name'], $artist['dates']));
-            } catch (SetlistFmException $e) {
-                if ($e->stopsTheScan()) {
-                    throw $e;
-                }
-                // Leave the artist pending; the next scan retries it.
-            }
-        }
-        $this->queue->progress($jobId, 'artists', $total, $total, null);
-
-        return true;
+        return $this->each($jobId, 'artists', $this->repo->artistsToResolve(), fn (array $a) => $a['name'], function (array $artist): void {
+            $this->repo->saveArtist($artist['id'], $this->resolver->resolve($artist['name'], $artist['dates']));
+        });
     }
 
     private function matchSetlists(int $jobId): bool
     {
-        $performances = $this->repo->performancesToMatch();
-        $total = count($performances);
-        foreach ($performances as $i => $p) {
+        return $this->each($jobId, 'setlists', $this->repo->performancesToMatch(), self::label(...), function (array $p): void {
+            $this->repo->saveMatch((int) $p['id'], $this->matcher->match($p, (string) $p['mbid']));
+        }, onError: fn (array $p, SetlistFmException $e) => $this->repo->markError((int) $p['id'], $e->getMessage()));
+    }
+
+    private function extractSongs(int $jobId): bool
+    {
+        // A failure leaves the performance unextracted, so the next scan retries it.
+        $finished = $this->each($jobId, 'songs', $this->songs->performancesToExtract(), self::label(...), function (array $p): void {
+            $this->extractor->extract($p);
+        });
+        $this->songs->pruneOrphans();
+
+        return $finished;
+    }
+
+    /**
+     * Runs $work over $items with progress and cancel checks. Errors that stop the scan are rethrown;
+     * other API errors go to $onError (or are skipped) so one bad item doesn't end the run.
+     *
+     * @param list<array<string, mixed>> $items
+     */
+    private function each(int $jobId, string $stage, array $items, callable $label, callable $work, ?callable $onError = null): bool
+    {
+        $total = count($items);
+        foreach ($items as $i => $item) {
             if ($this->queue->isCanceled($jobId)) {
                 return false;
             }
-            $label = $p['artist'] . ' · ' . (new \DateTimeImmutable($p['start_date']))->format('M j, Y');
-            $this->queue->progress($jobId, 'setlists', $i, $total, $label);
+            $this->queue->progress($jobId, $stage, $i, $total, $label($item));
             try {
-                $this->repo->saveMatch((int) $p['id'], $this->matcher->match($p, (string) $p['mbid']));
+                $work($item);
             } catch (SetlistFmException $e) {
                 if ($e->stopsTheScan()) {
                     throw $e;
                 }
-                $this->repo->markError((int) $p['id'], $e->getMessage());
+                $onError && $onError($item, $e);
             }
         }
-        $this->queue->progress($jobId, 'setlists', $total, $total, null);
+        $this->queue->progress($jobId, $stage, $total, $total, null);
 
         return true;
+    }
+
+    private static function label(array $performance): string
+    {
+        return $performance['artist'] . ' · ' . (new \DateTimeImmutable($performance['start_date']))->format('M j, Y');
     }
 }

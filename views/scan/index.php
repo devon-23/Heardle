@@ -4,14 +4,14 @@ use HeardLive\Http\Csrf;
 
 $active = $job !== null && in_array($job['status'], ['queued', 'running'], true);
 $stage = $job['stage'] ?? null;
-$stages = ['artists' => 'Artists', 'setlists' => 'Setlists'];
+$stages = ['artists' => 'Artists', 'setlists' => 'Setlists', 'songs' => 'Songs'];
 
 // Initial meter state; app.js keeps it current while the scan runs.
 $meter = function (string $key) use ($job, $stage): array {
     if ($job === null || $stage === null) {
         return [0, ''];
     }
-    $order = ['artists' => 0, 'setlists' => 1];
+    $order = ['artists' => 0, 'setlists' => 1, 'songs' => 2];
     if ($order[$key] < $order[$stage]) {
         return [100, 'done'];
     }
@@ -88,6 +88,9 @@ $noSetlist = $coverage['missing'] + $coverage['empty'];
             <div class="stat stat--muted"><dt>Not scanned yet</dt><dd><?= e($coverage['pending'] + $coverage['error']) ?></dd></div>
         </dl>
         <div class="actions">
+            <?php if ($coverage['matched'] > 0): ?>
+                <a class="button button--ghost" href="/songs">See your songs</a>
+            <?php endif ?>
             <?php if ($needChoice > 0): ?>
                 <a class="button button--primary" href="/concerts?filter=attention">Make <?= e($needChoice) ?> <?= $needChoice === 1 ? 'choice' : 'choices' ?></a>
             <?php endif ?>
