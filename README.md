@@ -6,7 +6,7 @@ The full plan is in [docs/BUILD_SPEC.md](docs/BUILD_SPEC.md).
 
 ## Status
 
-Phase 4 — CSV import, concert review, the setlist scan (a background worker finds each attended performance's setlist on setlist.fm), the song library (every unique song you heard, deduplicated, with the shows each came from), and Apple Music matching: the scan searches the iTunes Search API for each song, accepts sure matches, and queues the rest on **Apple Music** for keyboard review. Live API checks are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+Phase 5 — CSV import, concert review, the setlist scan (a background worker finds each attended performance's setlist on setlist.fm), the song library (every unique song you heard, deduplicated, with the shows each came from), Apple Music matching through the iTunes Search API with keyboard review, **Export** (the playlist as CSV for Soundiiz or TuneMyMusic, split into parts for free-plan limits, plus a details spreadsheet and the list of songs that didn't make it) and **Stats**. Live API checks are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Scanning with real setlist.fm data
 
@@ -15,6 +15,8 @@ Phase 4 — CSV import, concert review, the setlist scan (a background worker fi
 3. Restart `bin/dev`, open **Setlists**, start a scan.
 
 For Apple Music matches, set `ITUNES_MODE=live` (no key needed). Apple allows about 20 searches a minute, so the first full match runs for a while in the background; it resumes where it stopped.
+
+To build the playlist, open **Export**, download the parts, and import each into [Soundiiz](https://soundiiz.com) (free: 200 songs per playlist) or [TuneMyMusic](https://www.tunemymusic.com/transfer/csv-to-apple-music). The export page walks through both.
 
 Switching between fixture and live mode clears results the scan found automatically; choices you made are kept.
 

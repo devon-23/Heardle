@@ -1,6 +1,6 @@
 <?php /** @var string $title @var string $content */
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-$nav = ['/import' => 'Import', '/concerts' => 'Concerts', '/scan' => 'Setlists', '/songs' => 'Songs', '/matches' => 'Apple Music'];
+$nav = ['/import' => 'Import', '/concerts' => 'Concerts', '/scan' => 'Setlists', '/songs' => 'Songs', '/matches' => 'Apple Music', '/export' => 'Export', '/stats' => 'Stats'];
 ?>
 <!doctype html>
 <html lang="en">

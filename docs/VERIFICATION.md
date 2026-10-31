@@ -37,4 +37,11 @@ Verified from the docs (2026-10-29): endpoint list, `x-api-key` header, `Accept:
 
 ## Transfer service (Phase 5)
 
-- CSV columns TuneMyMusic / Soundiiz accept, and free-tier limits.
+| Assumption | Where | How to check | Status |
+|---|---|---|---|
+| Soundiiz reads a playlist CSV with lowercase headers `title, artist, album, …` | `ExportRepository::TRANSFER_HEADER` (`title, artist, album, duration, url`) | Their sample file | **Verified 2026-10-30** from `soundiiz.com/data/fileExamples/playlistExport.csv`: `title,artist,album,isrc,platform,trackId,duration,addedDate,addedBy,url`, UTF-8 with BOM, durations like `157s`. Unused columns are left out. |
+| Soundiiz free plan: 200 songs per playlist, any number of playlists one at a time | `ExportController::SIZES` (default 200 per file) | Pricing page | **Verified 2026-10-30** (soundiiz.com/pricing). Whether "Import from file" itself is free isn't clear from that page; their tutorial marks playlist import as free. |
+| Soundiiz imports a file into Soundiiz first; a second step transfers it to Apple Music | Export page instructions | Their tutorial | **Verified 2026-10-30** (tutorial: Import playlist → From file → review → import to Soundiiz) |
+| TuneMyMusic takes a CSV ("Upload file" source) and matches on title, artist, album and ISRC | Same file as Soundiiz | Their CSV → Apple Music page | **Verified 2026-10-30** from the page; it publishes no column names, so it's untested whether it reads these headers |
+| TuneMyMusic free-plan limit | Export page says it isn't published | — | **Unknown.** One third-party blog says 500 songs; not on TuneMyMusic's own pages. |
+| A real import builds the playlist in Apple Music | — | Import part 1 with each service | **Not done yet.** Needs your Apple Music sign-in. |

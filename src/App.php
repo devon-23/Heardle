@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace HeardLive;
 
 use HeardLive\Concerts\EventRepository;
+use HeardLive\Export\ExportRepository;
 use HeardLive\Http\Controllers\ConcertController;
+use HeardLive\Http\Controllers\ExportController;
 use HeardLive\Http\Controllers\ImportController;
 use HeardLive\Http\Controllers\MatchController;
 use HeardLive\Http\Controllers\ScanController;
 use HeardLive\Http\Controllers\SongController;
+use HeardLive\Http\Controllers\StatsController;
 use HeardLive\Http\Csrf;
 use HeardLive\Http\Request;
 use HeardLive\Http\Response;
@@ -18,6 +21,7 @@ use HeardLive\Http\View;
 use HeardLive\Import\UploadStore;
 use HeardLive\Matching\MatchRepository;
 use HeardLive\Songs\SongRepository;
+use HeardLive\Stats\StatsRepository;
 use HeardLive\Support\Config;
 use HeardLive\Support\Db;
 use HeardLive\Support\Http\HttpClient;
@@ -112,6 +116,12 @@ final class App
         $this->router->post('/matches/{id}/reopen', fn (Request $r, array $p) => $this->matches()->reopen($r, $p));
         $this->router->post('/matches/{id}/exclude', fn (Request $r, array $p) => $this->matches()->exclude($r, $p));
         $this->router->post('/matches/{id}/search', fn (Request $r, array $p) => $this->matches()->search($r, $p));
+
+        $this->router->get('/export', fn (Request $r) => $this->exports()->index($r));
+        $this->router->get('/export/playlist.csv', fn (Request $r) => $this->exports()->playlist($r));
+        $this->router->get('/export/missing.csv', fn (Request $r) => $this->exports()->missing($r));
+
+        $this->router->get('/stats', fn (Request $r) => (new StatsController($this->view, new StatsRepository($this->db())))->index($r));
     }
 
     private function songs(): SongController
@@ -131,6 +141,11 @@ final class App
             $services->jobs(),
             $this->config->itunesMode,
         );
+    }
+
+    private function exports(): ExportController
+    {
+        return new ExportController($this->view, new ExportRepository($this->db()), new MatchRepository($this->db()));
     }
 
     private function db(): PDO

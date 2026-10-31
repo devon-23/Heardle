@@ -20,6 +20,13 @@ final class SongRepository
         JOIN performances p ON p.id = sp.performance_id AND p.attended = 1 AND p.setlist_status = \'matched\'
         JOIN events e ON e.id = p.event_id AND e.active = 1';
 
+    /**
+     * 1 when performance p was probably a supporting set: shorter than the longest setlist found for that
+     * show. The CSV doesn't say who headlined, and its order isn't reliable (openers are sometimes listed first).
+     */
+    public const SUPPORT_SET = "(p.setlist_song_count < (SELECT MAX(p3.setlist_song_count) FROM performances p3
+        WHERE p3.event_id = p.event_id AND p3.setlist_status = 'matched'))";
+
     public function __construct(private PDO $pdo)
     {
     }
@@ -133,7 +140,7 @@ final class SongRepository
         match ($show) {
             'covers' => $where[] = "s.original_key <> ''",
             'repeats' => $having[] = 'heard > 1',
-            'openers' => $having[] = 'MIN(p.position) > 0',
+            'openers' => $having[] = 'MIN(' . self::SUPPORT_SET . ') = 1',
             'review' => $having[] = '(MAX(sp.medley) = 1 OR MAX(sp.partial) = 1)',
             'all', 'excluded' => null,
             default => throw new InvalidArgumentException("Unknown filter: $show"),

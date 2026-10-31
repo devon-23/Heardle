@@ -302,18 +302,23 @@ Requires an Apple Developer Program membership (paid). From the docs [Verified]:
 ## 9. Export and stats
 
 ### 9.1 CSV export
-Columns: `Title, Artist, Album, Apple Music URL, Apple Music ID, Times Heard, First Heard, Last Heard, Performed By, Original Artist`.
-- Only songs with a selected recording, not excluded, deduplicated by `trackId`.
-- Second export: the unmatched list (what you heard but couldn't get).
-- [Unverified] Exact column names TuneMyMusic / Soundiiz expect, and their free-tier track limits. Phase 5 tests a real import and adjusts the column order or adds a preset.
+Three downloads from **Export** (`/export`):
+- **Transfer file** (`title, artist, album, duration, url`), the column names from Soundiiz's sample file [Verified]. Titles and artists are Apple Music's own, so the service finds the same recordings. Split into files of 200 (Soundiiz free plan [Verified]), 500 or all in one; each part is named "Name (2 of 7)". Order: when first heard (show date, then setlist position) or most heard first. Optional "heard at least N times" filter.
+- **Details spreadsheet**: `Title, Artist, Album, Apple Music URL, Apple Music ID, Times Heard, First Heard, Last Heard, Performed By, Original Artist`.
+- **Not on the playlist**: every heard, not-excluded song without a picked recording, with why (not found, waiting for review, not searched) and its latest setlist.
+
+Rules: only songs with a picked recording (automatic or chosen), not excluded, one row per `trackId` (two songs matched to one recording are one row; times heard counts every show either was played at). Files are UTF-8 with a BOM and CRLF line ends. The spreadsheet files defuse cells starting with `= + - @`; the transfer file keeps titles exact.
+- [Unverified] TuneMyMusic's column handling and free limit; a real import into Apple Music (see `docs/VERIFICATION.md`).
 
 ### 9.2 v1 stats
-- Unique songs heard live, concerts represented, artists seen.
-- Most-heard songs (with the list of shows).
-- Songs heard from opening acts (non-first performers in `Bands Seen`; labeled "probable" since the CSV doesn't mark headliners).
-- Artists contributing the most songs.
-- Covers you've heard.
-- Concerts/performances with missing setlists (coverage %).
+On **Stats** (`/stats`):
+- Unique songs heard live, times heard, artists, concerts represented, years; playlist size and length (from the studio recordings).
+- Most-heard songs, each with its list of shows.
+- Artists contributing the most songs; biggest nights (most songs at one show).
+- Songs from supporting sets, labeled "probable": a set shorter than the longest setlist found for that show. The CSV doesn't mark headliners and its order isn't reliable (openers are sometimes listed first), so lineup position isn't used. The library's "From openers" filter uses the same rule.
+- Covers you've heard, and the most-covered original artist.
+- Caught only once: songs heard once from artists seen at least three times. Explicitly not rarity (§10).
+- Setlist coverage: share of attended sets with a setlist, a breakdown of the rest, and the most recent ones without songs.
 
 ---
 

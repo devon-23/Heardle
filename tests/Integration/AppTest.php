@@ -307,6 +307,67 @@ final class AppTest extends TestCase
         $this->assertContains('name="from" value="song"', $show);
     }
 
+    public function testExportPageAndDownloads(): void
+    {
+        $this->assertContains('No songs with an Apple Music recording yet', $this->get('/export')->body);
+
+        $this->post('/import/confirm', ['file' => $this->uploadSample()]);
+        $services = new \HeardLive\Services(Config::fromArray([], dirname(__DIR__, 2)), $this->pdo);
+        $jobId = $services->jobs()->enqueue('scan');
+        $services->jobs()->claimNext();
+        $services->scanJob()->run($jobId);
+
+        $page = $this->get('/export', ['name' => 'Rós <3', 'size' => '200']);
+        $this->assertSame(200, $page->status);
+        $this->assertContains('Make the playlist', $page->body);
+        $this->assertContains('Rós &lt;3', $page->body);
+        $this->assertContains('2 songs aren’t', $page->body, 'the review queue is mentioned');
+        $this->assertContains('/export/playlist.csv?part=1&amp;format=transfer&amp;name=R%C3%B3s+%3C3&amp;min=1&amp;order=first&amp;size=200', $page->body);
+        $this->assertSame(200, $this->get('/export', ['size' => '7', 'min' => 'x', 'order' => 'x'])->status, 'bad options fall back');
+
+        $csv = $this->get('/export/playlist.csv', ['name' => 'Rós <3', 'size' => '200']);
+        $this->assertSame('text/csv; charset=utf-8', $csv->headers['Content-Type']);
+        $this->assertSame('attachment; filename="R_s 3.csv"; filename*=UTF-8\'\'R%C3%B3s%203.csv', $csv->headers['Content-Disposition']);
+        $lines = explode("\r\n", trim($csv->body));
+        $this->assertSame("\u{FEFF}title,artist,album,duration,url", $lines[0]);
+        $this->assertSame(4, count($lines));
+        $this->assertContains('"Neon Hours","The Midnight Arcade"', $lines[1]);
+
+        // Split into parts, each named for its place.
+        $this->pdo->exec("UPDATE song_matches SET status = 'chosen' WHERE status = 'review'");
+        $part = $this->get('/export/playlist.csv', ['size' => '200', 'part' => '1', 'min' => '2']);
+        $this->assertSame(3, count(explode("\r\n", trim($part->body))));
+        $this->assertSame(404, $this->get('/export/playlist.csv', ['part' => '2'])->status);
+
+        $details = $this->get('/export/playlist.csv', ['format' => 'details', 'size' => '0']);
+        $this->assertContains('Title,Artist,Album,"Apple Music URL","Apple Music ID","Times Heard"', $details->body);
+        $this->assertContains('Heard Live - details.csv', $details->headers['Content-Disposition']);
+
+        $missing = $this->get('/export/missing.csv');
+        $this->assertContains('"Signal Fire","Paper Satellites",,1,', $missing->body);
+        $this->assertContains('"Not found on Apple Music"', $missing->body);
+    }
+
+    public function testStatsPage(): void
+    {
+        $this->assertContains('No songs yet', $this->get('/stats')->body);
+
+        $this->post('/import/confirm', ['file' => $this->uploadSample()]);
+        $services = new \HeardLive\Services(Config::fromArray([], dirname(__DIR__, 2)), $this->pdo);
+        $jobId = $services->jobs()->enqueue('scan');
+        $services->jobs()->claimNext();
+        $services->scanJob()->run($jobId);
+
+        $page = $this->get('/stats')->body;
+        $this->assertContains('songs heard live', $page);
+        $this->assertContains('From 2 artists across 2 concerts, 2025–2026.', $page);
+        $this->assertContains('The 2 shows', $page);
+        $this->assertContains('Glow in the Dark Tour', $page);
+        $this->assertContains('original by Blondie', $page);
+        $this->assertContains('3 of the 7 sets you saw have a setlist', $page);
+        $this->assertContains('needs you to pick a setlist', $page);
+    }
+
     public function testReviewClearsAttentionAndFiltersWork(): void
     {
         $this->post('/import/confirm', ['file' => $this->uploadSample()]);
